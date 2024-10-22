@@ -132,29 +132,42 @@ def Creat_Sequence(stock_data, feature_list, seq_length=5, predict_length=7):
 import torch
 from sklearn.preprocessing import minmax_scale
 def buying_index(reg_model, X_for_predict, predict_length):
-    """
-    This function predicts future closing prices and identifies potential buying opportunities.
+  """
+  This function predicts future closing prices and identifies potential buying opportunities.
 
-    Args:
-        reg_model: Trained regression model (GRUModel in your case)
-        X_for_predict: A list or NumPy array containing the input sequence for prediction.
-        predict_length: The number of days to predict into the future.
+  Args:
+      reg_model: Trained regression model (GRUModel in your case)
+      X_for_predict: A list or NumPy array containing the input sequence for prediction.
+      predict_length: The number of days to predict into the future.
 
-    Returns:
-        None (Displays a plot with past and predicted closing prices and a potential buying index).
-    """
+  Returns:
+      None (Displays a plot with past and predicted closing prices and a potential buying index).
+  """
 
-    # Convert input to PyTorch tensor
-    X_tensor = torch.tensor(X_for_predict, dtype=torch.float)
+  # Convert input to PyTorch tensor
+  
+  X_tensor = torch.tensor(X_for_predict, dtype=torch.float, device="cuda")
+  reg_model.model.eval()
+  y_predict = reg_model.model(X_tensor)
+  y_predict_numpy = y_predict.detach().to('cpu').numpy()
 
-    # Predict closing prices
-    y_predict = reg_model.model(X_tensor)
-    y_predict_numpy = y_predict.detach().numpy()
+  y_scaled = minmax_scale(y_predict_numpy)
 
-    y_scaled = minmax_scale(y_predict_numpy)
-    y_scaled = y_predict_numpy
-    # Separate past and predicted prices 
-    past_prices = y_scaled[-2*predict_length:-predict_length]
-    future_prices = y_scaled[-predict_length:]
+  # Separate past and predicted prices
+  past_prices = y_scaled[-2*predict_length:-predict_length]
+  future_prices = y_scaled[-predict_length:]
 
-    return y_scaled, past_prices, future_prices
+  return y_scaled, past_prices, future_prices
+
+
+def calculate_vwap(high, low, close, volume):
+    # Step 1: Calculate the typical price for each period
+    typical_price = (high + low + close) / 3
+    
+    # Step 2: Calculate the total price-volume product
+    price_volume_product = typical_price * volume
+    
+    # Step 3: VWAP is the price-volume product divided by the volume
+    vwap = price_volume_product / volume
+    
+    return vwap
