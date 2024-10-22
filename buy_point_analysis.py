@@ -50,7 +50,7 @@ else:
     stock_data = yf.download(CODE, start=start, end=datetime.today())
 
 
-from factors_lib import Momentum, Short_Term_Reversion, WPEG, FHW_Approaching, Oversold_Reverse_Score, ForceIndex, CCG_Score
+from factors_lib import Momentum, Short_Term_Reversion, FHW_Approaching, Oversold_Reverse_Score, ForceIndex, CCG_Score, ILLIQ_Factor
 
 
 def calculate_vwap(high, low, close, volume):
@@ -80,19 +80,27 @@ stock_data["FRX"] = ForceIndex(pool_df=stock_data)
 stock_data["FHW"] = FHW_Approaching(input_df=stock_data) * -1
 stock_data["OSS"] = Oversold_Reverse_Score(df=stock_data)
 stock_data["CCG"] = CCG_Score(stock_data)
-
+stock_data["ILLIQ"] = ILLIQ_Factor(stock_data, 9)
 
 seq_length = 21
 predict_length = 7
-feature_list = ['High', 'Low', 'Open', 'Close']
+feature_list = ['High', 'Low', 'Open', 'Close', 'OSS', 'CCG', 'Momentum', 'ILLIQ']
 saved_price = stock_data['Close'].copy()
 saved_label = minmax_scale(stock_data['Close'].copy())
 
 
 from KSL_system import KumaModel
-reg_model = KumaModel(model_name='gru', input_size=len(feature_list))
+reg_model = KumaModel(
+            model_name='drnn', 
+            input_size=len(feature_list),
+            hidden_size=32,
+            output_size=1,
+            num_layers=2,
+            dropout_rate=0.3)
+reg_model.set_train_params(loss_type='ic')
+
 reg_model.model.load_state_dict(torch.load('kuma_models/my_model.pth', weights_only=True))
-# my_scaler = joblib.load('kuma_models/scaler.gz')
+my_scaler = joblib.load('kuma_models/scaler.gz')
 stock_data.fillna(0, inplace=True)
 my_scaler = StandardScaler()
 stock_data[feature_list] = my_scaler.fit_transform(stock_data[feature_list])
@@ -105,7 +113,7 @@ sequences, labels = Creat_Sequence(
                         predict_length=predict_length)
 
 
-reg_model.set_train_params(loss_type='ic')
+
 # reg_model.train_model(sequences, y=labels, seq_length=seq_length, epochs=2000)
 y_scaled, past_prices, future_prices = buying_index(reg_model, sequences, predict_length)
 
