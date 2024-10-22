@@ -1,0 +1,14 @@
+joblib==1.4.2
+matplotlib==3.9.2
+mplfinance==0.12.10b0
+numpy==2.1.2
+pandas==2.2.3
+pymssql==2.3.1
+PyYAML==6.0.1
+PyYAML==6.0.2
+Requests==2.32.3
+scikit_learn==1.5.2
+torch==2.5.0+cu118
+tqdm==4.66.5
+tushare==1.4.13
+yfinance==0.2.45
