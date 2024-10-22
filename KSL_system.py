@@ -3,7 +3,7 @@ from utils import *
 
 class KumaModel:
 
-    def __init__(self, model_name, input_size=6, hidden_size=32, output_size=1, num_layers=3, dropout_rate=0.2, is_attention=False):
+    def __init__(self, model_name, input_size=6, hidden_size=32, output_size=1, num_layers=3, dropout_rate=0.2, is_attention=False, is_plot=False):
         """
         Initialize the model with parameters.
         Args:
@@ -15,9 +15,9 @@ class KumaModel:
             is_attention: (bool, default False) whether to deploy attention layber between grus.
 
         """
-        # self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.device = 'cpu'
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model_list = ['gru', 'drnn']
+        self.is_plot = is_plot
 
         if model_name.lower() == 'gru':
             self.model = GRUModel(input_size, hidden_size, output_size).to(self.device)
@@ -60,11 +60,12 @@ class KumaModel:
         loss_values = []
         
         # record the train process in plots
-        plt.ion()
-        fig, ax = plt.subplots()
-        ax.set_xlabel('Epochs')
-        ax.set_ylabel(f'Loss Value')
-        line, = ax.plot([], [], 'r-')
+        if self.is_plot:
+            plt.ion()
+            fig, ax = plt.subplots()
+            ax.set_xlabel('Epochs')
+            ax.set_ylabel(f'Loss Value')
+            line, = ax.plot([], [], 'r-')
         
         def update_plot(loss_values):
             line.set_xdata(np.arange(len(loss_values)))
@@ -74,11 +75,10 @@ class KumaModel:
             fig.canvas.draw()
             fig.canvas.flush_events()
 
-
         X_tensor = torch.tensor(X.reshape(len(y), seq_length, -1), dtype=torch.float).to(self.device)
         y_tensor = torch.tensor(y, dtype=torch.float).view(-1).to(self.device)
         
-        for _ in range(epochs):
+        for epoch in range(epochs):
             
             # Get data for training
             inputs = X_tensor  # Add batch dimension
@@ -95,11 +95,13 @@ class KumaModel:
 
             # record the train process
             loss_values.append(loss.item())
-            # update_plot(loss_values)
+            if self.is_plot and epoch % 200 == 0:
+                update_plot(loss_values)
 
-        # plt.ioff()
-        # plt.show()
-        # plt.close(fig)
+        if self.is_plot:
+            plt.ioff()
+            plt.show()
+            plt.close(fig)
     
 
     def prediction(self, val_X, date, code_list, seq_length):
