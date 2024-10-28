@@ -3,7 +3,7 @@ from utils import *
 
 class KumaModel:
 
-    def __init__(self, model_name, input_size=6, hidden_size=32, output_size=1, num_layers=3, dropout_rate=0.2, is_attention=False, is_plot=False):
+    def __init__(self, model_name, unit='GRU', input_size=6, hidden_size=32, output_size=1, num_layers=3, dropout_rate=0.2, is_attention=False, is_plot=False):
         """
         Initialize the model with parameters.
         Args:
@@ -22,7 +22,7 @@ class KumaModel:
         if model_name.lower() == 'gru':
             self.model = GRUModel(input_size, hidden_size, output_size).to(self.device)
         elif model_name.lower() == 'drnn':
-            self.model = DRNNModel(input_size, hidden_size, output_size, num_layers, dropout_rate, is_attention).to(self.device)
+            self.model = DRNNModel(input_size, hidden_size, output_size, num_layers, dropout_rate, unit, is_attention).to(self.device)
         else:
             print(f"Model not exist, please choose between {self.model_list}")
             raise NameError
@@ -76,7 +76,7 @@ class KumaModel:
             fig.canvas.flush_events()
 
         X_tensor = torch.tensor(X.reshape(len(y), seq_length, -1), dtype=torch.float).to(self.device)
-        y_tensor = torch.tensor(y, dtype=torch.float).view(-1).to(self.device)
+        y_tensor = torch.tensor(y, dtype=torch.float).to(self.device)
         
         for epoch in range(epochs):
             
@@ -85,7 +85,6 @@ class KumaModel:
             targets = y_tensor
 
             outputs = model(inputs)
-
             loss = criterion(outputs, targets)
 
             # Backward pass and optimization
