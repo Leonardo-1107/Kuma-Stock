@@ -47,17 +47,30 @@ class DRNNModel(nn.Module):
     dropout_rate(float, default 0.2): the rate of dropout layer
     
     """
-    def __init__(self, input_size, hidden_size, output_size=1, num_layers=1, dropout_rate = 0.5, is_attention=False):
+    def __init__(self, input_size, hidden_size, output_size=1, num_layers=1, dropout_rate = 0.2, unit='GRU', is_attention=False):
         super(DRNNModel, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
         self.drop_out = nn.Dropout(p=dropout_rate)
         # Define the recurrent layers
-        self.rnn_layers = nn.ModuleList([
-            nn.GRU(input_size if i == 0 else hidden_size, hidden_size, batch_first=True)
-            for i in range(num_layers)
-        ])
+        if unit == 'LSTM':
+            self.rnn_layers = nn.ModuleList([
+                nn.LSTM(input_size if i == 0 else hidden_size, hidden_size, batch_first=True)
+                for i in range(num_layers)
+            ])
+
+        elif unit == 'RNN':
+            self.rnn_layers = nn.ModuleList([
+                nn.RNN(input_size if i == 0 else hidden_size, hidden_size, batch_first=True)
+                for i in range(num_layers)
+            ])
+
+        else:
+            self.rnn_layers = nn.ModuleList([
+                nn.GRU(input_size if i == 0 else hidden_size, hidden_size, batch_first=True)
+                for i in range(num_layers)
+            ])
 
         self.attention = SelfAttention(hidden_size)
         self.attention_triger = is_attention
