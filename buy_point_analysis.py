@@ -82,7 +82,7 @@ stock_data["OSS"] = Oversold_Reverse_Score(df=stock_data)
 stock_data["CCG"] = CCG_Score(stock_data)
 stock_data["ILLIQ"] = ILLIQ_Factor(stock_data, 9)
 
-seq_length = 21
+seq_length = 14
 predict_length = 7
 feature_list = ['High', 'Low', 'Open', 'Close', 'OSS', 'CCG', 'Momentum', 'ILLIQ']
 saved_price = stock_data['Close'].copy()
@@ -91,12 +91,13 @@ saved_label = minmax_scale(stock_data['Close'].copy())
 
 from KSL_system import KumaModel
 reg_model = KumaModel(
-            model_name='drnn', 
-            input_size=len(feature_list),
-            hidden_size=32,
-            output_size=1,
-            num_layers=2,
-            dropout_rate=0.3)
+        model_name='drnn', 
+        input_size=len(feature_list),
+        hidden_size=32,
+        output_size=7,
+        num_layers=2,
+        dropout_rate=0.3,
+        is_plot=True)
 reg_model.set_train_params(loss_type='ic')
 
 reg_model.model.load_state_dict(torch.load('kuma_models/my_model.pth', weights_only=True))
@@ -106,16 +107,16 @@ my_scaler = StandardScaler()
 stock_data[feature_list] = my_scaler.fit_transform(stock_data[feature_list])
 
 stock_data['Label'] = saved_label
-sequences, labels = Creat_Sequence(
+sequences, labels = create_train_dataset(
                         stock_data, 
                         feature_list, 
                         seq_length=seq_length, 
-                        predict_length=predict_length)
+                        L=predict_length)
 
 
 
 # reg_model.train_model(sequences, y=labels, seq_length=seq_length, epochs=2000)
-y_scaled, past_prices, future_prices = buying_index(reg_model, sequences, predict_length)
+y_scaled, past_prices, future_prices = buying_index(reg_model, sequences[-predict_length:], predict_length)
 
 
 # plot pics
@@ -143,17 +144,18 @@ if MARKET != 'CN':
     plt.subplot(6, 1, 3)
     plt.scatter(range(predict_length), past_prices, 
                 color='yellow', s=100, label=f'past {predict_length} days', edgecolors='black')
-    plt.scatter(range(predict_length, 2*predict_length), future_prices, alpha=0.7,
+    plt.scatter(range(predict_length, 2*predict_length-2), future_prices, alpha=0.7,
                 color='blue', s=100, label=f'future {predict_length} days', edgecolors='black')
-    plt.plot(y_scaled[-2*predict_length:], lw=1.2, ls='--', alpha=0.7, c='purple')
-    trend_line = pd.DataFrame(y_scaled)[-2*predict_length:].rolling(3, 1).mean().values
-    plt.plot(trend_line, c='r', alpha=0.5, label='trend line')
-    x_ticks = np.arange(-predict_length, predict_length + 1)
+    plt.plot(y_scaled, lw=1.2, ls='--', alpha=0.7, c='purple')
+    trend_line = pd.DataFrame(y_scaled).rolling(3, 1).mean().values
+    plt.plot(trend_line, c='r', ls='--', alpha=0.5, label='trend line')
+    x_ticks = np.arange(-predict_length+1, predict_length)
     x_labels = [f"T{(i if i == 0 else ('+' if i > 0 else '-') + str(abs(i)))}" for i in x_ticks]
 
+    plt.xticks(ticks=np.arange(2 * predict_length - 1), labels=x_labels)
     plt.legend(loc='upper left')
     plt.title('BUX')
-    plt.xticks(ticks=np.arange(2 * predict_length + 1), labels=x_labels)
+
 
 
 else:
