@@ -108,19 +108,30 @@ def standardize_testing_data(df, feature_list, scalers):
     
     return df[feature_list]
 
+def create_label_sequences(data, seq_length_L):
+    sequences = []
+    for i in range(len(data) - seq_length_L + 1):  
+        sequences.append(data[i:i + seq_length_L])
+    return np.array(sequences)
 
-def Creat_Sequence(stock_data, feature_list, seq_length=5, predict_length=7):
+
+def create_train_dataset(stock_data, feature_list, seq_length=14, L=7):
     sequences = []
     labels = []
 
     df = stock_data.copy()
-    label_seies = df['Label'].shift(predict_length).fillna(0).copy()
+    label_series = df['Label'].fillna(0).copy()
+    label_series = create_label_sequences(label_series, seq_length_L=L)
 
-    for i in range(len(df) - seq_length - predict_length):
+    for i in range(len(df) - seq_length - L + 1):
+        # Extract the sequence of features
         sequence = df[feature_list].iloc[i:i+seq_length, :].values.tolist()
-        label = label_seies.iloc[i+seq_length]
-        sequences.append(sequence)
-        labels.append(label)
+        label = label_series[i + seq_length]
+
+        # Check if the label is a sequence (list) and its length matches L
+        if isinstance(label, (list, np.ndarray)) and len(label) == L:
+            sequences.append(sequence)
+            labels.append(label)
 
     # Convert sequences and labels to NumPy arrays
     sequences = np.array(sequences)  
@@ -132,32 +143,41 @@ def Creat_Sequence(stock_data, feature_list, seq_length=5, predict_length=7):
 import torch
 from sklearn.preprocessing import minmax_scale
 def buying_index(reg_model, X_for_predict, predict_length):
-  """
-  This function predicts future closing prices and identifies potential buying opportunities.
+    """
+    This function predicts future closing prices and identifies potential buying opportunities.
 
-  Args:
-      reg_model: Trained regression model (GRUModel in your case)
-      X_for_predict: A list or NumPy array containing the input sequence for prediction.
-      predict_length: The number of days to predict into the future.
+    Args:
+        reg_model: Trained regression model (GRUModel in your case)
+        X_for_predict: A list or NumPy array containing the input sequence for prediction.
+        predict_length: The number of days to predict into the future.
 
-  Returns:
-      None (Displays a plot with past and predicted closing prices and a potential buying index).
-  """
+    Returns:
+        None (Displays a plot with past and predicted closing prices and a potential buying index).
+    """
 
-  # Convert input to PyTorch tensor
-  
-  X_tensor = torch.tensor(X_for_predict, dtype=torch.float, device="cuda")
-  reg_model.model.eval()
-  y_predict = reg_model.model(X_tensor)
-  y_predict_numpy = y_predict.detach().to('cpu').numpy()
+    # Convert input to PyTorch tensor
+    X_tensor = torch.tensor(X_for_predict, dtype=torch.float, device="cuda")
+    reg_model.model.eval()
+    y_predict = reg_model.model(X_tensor)
+    y_predict_numpy = y_predict.detach().to('cpu').numpy()
 
-  y_scaled = minmax_scale(y_predict_numpy)
+    y_scaled = minmax_scale(y_predict_numpy)
 
-  # Separate past and predicted prices
-  past_prices = y_scaled[-2*predict_length:-predict_length]
-  future_prices = y_scaled[-predict_length:]
+    counter = 0
+    record_arr = np.zeros((2*predict_length, ))
+    for seq in y_scaled:
+        for idx in range(predict_length):
+            if record_arr[counter+idx] == 0:
+                record_arr[counter+idx] = seq[idx]
+            else:
+                record_arr[counter+idx] =(record_arr[counter+idx] + seq[idx])/2
+        counter +=1
+    record = record_arr[:2*predict_length-2]
+    past_prices = record[:predict_length]
+    future_prices = record[predict_length:]
 
-  return y_scaled, past_prices, future_prices
+
+    return record, past_prices, future_prices
 
 
 def calculate_vwap(high, low, close, volume):
