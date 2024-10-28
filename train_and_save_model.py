@@ -10,16 +10,17 @@ import torch
 import joblib
 
 # Define the ticker symbol for Dow Jones Industrial Average
+TEST_MODE = False
 MARKET = "US"
 PERIOD = '1y'
-EPOCHS = 15000
+EPOCHS = 10000
 feature_length = 14
 label_length = 7
 feature_list = ['High', 'Low', 'Open', 'Close', 'OSS', 'CCG', 'Momentum', 'ILLIQ']
 
 reg_model = KumaModel(
     model_name='drnn', 
-    unit='LSTM',
+    unit='GRU',
     input_size=len(feature_list),
     hidden_size=32,
     output_size=7,
@@ -69,25 +70,25 @@ def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, label_s
     torch.save(reg_model.model.state_dict(), 'kuma_models/my_model.pth')
     joblib.dump(scaler, 'kuma_models/scaler.gz')
 
-    # only for validating the correctness of model
-    y_scaled, past_prices, future_prices = buying_index(reg_model, sequences[-label_sequence_length:], label_sequence_length)
-    plt.figure(figsize=(10, 4))
-    print(len(past_prices))
-    plt.scatter(range(label_sequence_length), past_prices, 
-                color='yellow', s=100, label=f'past {label_sequence_length} days', edgecolors='black')
-    plt.scatter(range(label_sequence_length, 2*label_sequence_length-2), future_prices, alpha=0.7,
-                color='blue', s=100, label=f'future {label_sequence_length} days', edgecolors='black')
-    plt.plot(y_scaled, lw=1.2, ls='--', alpha=0.7, c='purple')
-    trend_line = pd.DataFrame(y_scaled).rolling(3, 1).mean().values
-    plt.plot(trend_line, c='r', ls='--', alpha=0.5, label='trend line')
-    x_ticks = np.arange(-label_sequence_length+1, label_sequence_length)
-    x_labels = [f"T{(i if i == 0 else ('+' if i > 0 else '-') + str(abs(i)))}" for i in x_ticks]
+    if TEST_MODE:
+        # only for validating the correctness of model
+        y_scaled, past_prices, future_prices = buying_index(reg_model, sequences[-label_sequence_length:], label_sequence_length)
+        plt.figure(figsize=(10, 4))
+        plt.scatter(range(label_sequence_length), past_prices, 
+                    color='yellow', s=100, label=f'past {label_sequence_length} days', edgecolors='black')
+        plt.scatter(range(label_sequence_length, 2*label_sequence_length-2), future_prices, alpha=0.7,
+                    color='blue', s=100, label=f'future {label_sequence_length} days', edgecolors='black')
+        plt.plot(y_scaled, lw=1.2, ls='--', alpha=0.7, c='purple')
+        trend_line = pd.DataFrame(y_scaled).rolling(3, 1).mean().values
+        plt.plot(trend_line, c='r', ls='--', alpha=0.5, label='trend line')
+        x_ticks = np.arange(-label_sequence_length+1, label_sequence_length)
+        x_labels = [f"T{(i if i == 0 else ('+' if i > 0 else '-') + str(abs(i)))}" for i in x_ticks]
 
-    plt.xticks(ticks=np.arange(2 * label_sequence_length - 1), labels=x_labels)
-    plt.legend(loc='upper left')
-    plt.show()
+        plt.xticks(ticks=np.arange(2 * label_sequence_length - 1), labels=x_labels)
+        plt.legend(loc='upper left')
+        plt.show()
 
-code_list = ['^DJI']
+code_list = ['^DJI', '^NDX', 'SMCI']
 
 
 if __name__ == '__main__':
