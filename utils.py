@@ -161,7 +161,7 @@ def buying_index(reg_model, X_for_predict, predict_length):
     y_predict = reg_model.model(X_tensor)
     y_predict_numpy = y_predict.detach().to('cpu').numpy()
 
-    y_scaled = minmax_scale(y_predict_numpy)
+    y_scaled = y_predict_numpy
 
     counter = 0
     record_arr = np.zeros((2*predict_length, ))
