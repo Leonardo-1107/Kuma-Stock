@@ -78,6 +78,7 @@ class KumaModel:
         X_tensor = torch.tensor(X.reshape(len(y), seq_length, -1), dtype=torch.float).to(self.device)
         y_tensor = torch.tensor(y, dtype=torch.float).to(self.device)
         
+        model.train()
         for epoch in range(epochs):
             
             # Get data for training
