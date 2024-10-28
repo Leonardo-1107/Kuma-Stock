@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from factors_lib import *
 from sklearn.preprocessing import StandardScaler, minmax_scale
-from utils import Creat_Sequence, buying_index, calculate_vwap
+from utils import create_train_dataset, buying_index, calculate_vwap
 from KSL_system import KumaModel
 import torch
 import joblib
@@ -12,20 +12,25 @@ import joblib
 # Define the ticker symbol for Dow Jones Industrial Average
 MARKET = "US"
 PERIOD = '1y'
+EPOCHS = 15000
+feature_length = 14
+label_length = 7
 feature_list = ['High', 'Low', 'Open', 'Close', 'OSS', 'CCG', 'Momentum', 'ILLIQ']
 
 reg_model = KumaModel(
     model_name='drnn', 
+    unit='LSTM',
     input_size=len(feature_list),
     hidden_size=32,
-    output_size=1,
+    output_size=7,
     num_layers=2,
     dropout_rate=0.3,
     is_plot=True)
+
 reg_model.set_train_params(loss_type='ic')
 
 
-def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, predict_length=7, epochs=15000):
+def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, label_sequence_length=7, epochs=15000):
     # Create a Ticker object
     stock = yf.Ticker(code)
     stock_data = stock.history(period=period)
@@ -43,7 +48,7 @@ def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, predict
 
     # the labels should be condsidering future changes
     saved_label = minmax_scale((stock_data['High'].shift(-1)).fillna(0).copy())
-    # saved_label = minmax_scale(stock_data['Close'].copy())
+
     # load the original scaler for the first candidate
     try:
         scaler = joblib.load('kuma_models/scaler.gz')
@@ -54,37 +59,41 @@ def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, predict
 
     stock_data[feature_list] = scaler.transform(stock_data[feature_list])
     stock_data['Label'] = saved_label
-    sequences, labels = Creat_Sequence(stock_data, feature_list, seq_length=seq_length, predict_length=predict_length)
+
+    # here to process all the training data and labels
+    sequences, labels = create_train_dataset(stock_data, feature_list, seq_length=seq_length, L=label_sequence_length)
 
     # set to train
-
     reg_model.train_model(sequences, y=labels, seq_length=seq_length, epochs=epochs)
 
     torch.save(reg_model.model.state_dict(), 'kuma_models/my_model.pth')
     joblib.dump(scaler, 'kuma_models/scaler.gz')
 
-code_list = ['NVDA']
+    # only for validating the correctness of model
+    y_scaled, past_prices, future_prices = buying_index(reg_model, sequences[-label_sequence_length:], label_sequence_length)
+    plt.figure(figsize=(10, 4))
+    print(len(past_prices))
+    plt.scatter(range(label_sequence_length), past_prices, 
+                color='yellow', s=100, label=f'past {label_sequence_length} days', edgecolors='black')
+    plt.scatter(range(label_sequence_length, 2*label_sequence_length-2), future_prices, alpha=0.7,
+                color='blue', s=100, label=f'future {label_sequence_length} days', edgecolors='black')
+    plt.plot(y_scaled, lw=1.2, ls='--', alpha=0.7, c='purple')
+    trend_line = pd.DataFrame(y_scaled).rolling(3, 1).mean().values
+    plt.plot(trend_line, c='r', ls='--', alpha=0.5, label='trend line')
+    x_ticks = np.arange(-label_sequence_length+1, label_sequence_length)
+    x_labels = [f"T{(i if i == 0 else ('+' if i > 0 else '-') + str(abs(i)))}" for i in x_ticks]
+
+    plt.xticks(ticks=np.arange(2 * label_sequence_length - 1), labels=x_labels)
+    plt.legend(loc='upper left')
+    plt.show()
+
+code_list = ['^DJI']
 
 
 if __name__ == '__main__':
 
     for CODE in code_list:
-        train_and_save(CODE, MARKET)
+        train_and_save(CODE, MARKET, seq_length=feature_length, label_sequence_length=label_length, epochs=EPOCHS)
 
 
 
-# y_scaled, past_prices, future_prices = buying_index(reg_model, sequences, predict_length)
-# plt.figure(figsize=(10, 4))
-# plt.scatter(range(predict_length), past_prices, 
-#             color='yellow', s=100, label=f'past {predict_length} days', edgecolors='black')
-# plt.scatter(range(predict_length, 2*predict_length), future_prices, alpha=0.7,
-#             color='blue', s=100, label=f'future {predict_length} days', edgecolors='black')
-# plt.plot(y_scaled[-2*predict_length:], lw=1.2, ls='--', alpha=0.7, c='purple')
-# trend_line = pd.DataFrame(y_scaled)[-2*predict_length:].rolling(3, 1).mean().values
-# plt.plot(trend_line, c='r', alpha=0.5, label='trend line')
-# x_ticks = np.arange(-predict_length, predict_length + 1)
-# x_labels = [f"T{(i if i == 0 else ('+' if i > 0 else '-') + str(abs(i)))}" for i in x_ticks]
-
-# plt.xticks(ticks=np.arange(2 * predict_length + 1), labels=x_labels)
-# plt.legend(loc='upper left')
-# plt.show()
