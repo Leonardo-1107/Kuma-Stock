@@ -81,13 +81,21 @@ class DRNNModel(nn.Module):
         # Initialize hidden states
         batch_size, seq_len, _ = x.size()
         h_0 = torch.zeros(1, batch_size, self.hidden_size).to(x.device)
+        c_0 = torch.zeros(1, batch_size, self.hidden_size).to(x.device)  # Only needed for LSTM
+
         out = torch.zeros(batch_size, seq_len, self.fc.out_features).to(x.device)
         
         # Deep-attention-RNN net
         for i, rnn_layer in enumerate(self.rnn_layers):
-            x, h_0 = rnn_layer(x, h_0)
-            if i==0 & self.attention_triger:
+            
+            if i==0 and self.attention_triger:
                 x = self.attention(x)
+                    
+            if isinstance(rnn_layer, nn.LSTM):  
+                x, (h_0, c_0) = rnn_layer(x, (h_0, c_0))  # Pass both h_0 and c_0
+            else:
+                x, h_0 = rnn_layer(x, h_0)
+
             x = self.drop_out(x)            
         
         # Return last steo of the final output     
