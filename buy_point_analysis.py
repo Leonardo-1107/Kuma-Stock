@@ -17,7 +17,9 @@ parser.add_argument("stock_code", help="The code of selected stock", type=str, d
 args = parser.parse_args()
 CODE = args.stock_code
 MARKET = args.market
-
+MODEL = 'LSTM'
+HIDDEN_SIZE = 32
+NUM_LAYER = 2
 
 if MARKET == "CN":
     # Get the info of stocks by tushare, Chinese A stock
@@ -84,23 +86,24 @@ stock_data["ILLIQ"] = ILLIQ_Factor(stock_data, 9)
 
 seq_length = 14
 predict_length = 7
-feature_list = ['High', 'Low', 'Open', 'Close', 'OSS', 'CCG', 'Momentum', 'ILLIQ']
+feature_list = ['High', 'Low', 'Open', 'Close', 'Volume', 'OSS', 'CCG', 'Momentum', 'ILLIQ']
 saved_price = stock_data['Close'].copy()
 saved_label = minmax_scale(stock_data['Close'].copy())
 
 
 from KSL_system import KumaModel
 reg_model = KumaModel(
-        model_name='drnn', 
+        model_name='drnn',
+        unit=MODEL, 
         input_size=len(feature_list),
         hidden_size=32,
         output_size=7,
-        num_layers=2,
+        num_layers=NUM_LAYER,
         dropout_rate=0.3,
         is_plot=True)
 reg_model.set_train_params(loss_type='ic')
 
-reg_model.model.load_state_dict(torch.load('kuma_models/my_model.pth', weights_only=True))
+reg_model.model.load_state_dict(torch.load(f'kuma_models/model_{MODEL}_{NUM_LAYER}_{HIDDEN_SIZE}_labelL_{predict_length}.pth', weights_only=True))
 my_scaler = joblib.load('kuma_models/scaler.gz')
 stock_data.fillna(0, inplace=True)
 my_scaler = StandardScaler()
