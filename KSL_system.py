@@ -1,5 +1,6 @@
 from net import *
 from utils import *
+from loss_functions import *
 
 class KumaModel:
 
@@ -32,8 +33,13 @@ class KumaModel:
             self.criterion = ICLoss().to(self.device)
         elif loss_type.lower() == 'mse':
             self.criterion = nn.MSELoss().to(self.device)
+        elif loss_type.lower() == 'mpe':
+            self.criterion = MeanPercentageErrorLoss().to(self.device)
+        elif loss_type.lower() == 'mase':
+            self.criterion = MeanAbsoluteScaledErrorLoss().to(self.device)
         elif loss_type.lower() == 'l1':
             self.criterion = nn.L1Loss().to(self.device)
+
         else:
             print("Wrong Loss Function!")
             raise TypeError
@@ -100,8 +106,8 @@ class KumaModel:
 
         if self.is_plot:
             plt.ioff()
-            plt.show()
-            plt.close(fig)
+            plt.savefig('train_loss.png')
+
     
 
     def prediction(self, val_X, date, code_list, seq_length):
