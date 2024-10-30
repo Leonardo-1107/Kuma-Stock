@@ -3,25 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class ICLoss(nn.Module):
-    def __init__(self):
-        super(ICLoss, self).__init__()
-
-    def forward(self, y_pred, y_true):
-        y_pred = y_pred.squeeze()
-        y_true = y_true.squeeze()
-        
-        pred_mean = torch.mean(y_pred)
-        true_mean = torch.mean(y_true)
-        
-        numerator = torch.sum((y_pred - pred_mean) * (y_true - true_mean))
-        denominator = torch.sqrt(torch.sum((y_pred - pred_mean)**2) * torch.sum((y_true - true_mean)**2))
-        
-        ic = numerator / denominator
-        
-        # To make it a loss function, we want to maximize IC (which means minimizing -IC)
-        return -ic
-
 
 # set a simple gru model for time sequence prediction
 class GRUModel(nn.Module):
