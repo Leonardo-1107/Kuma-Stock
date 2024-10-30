@@ -6,7 +6,6 @@ def get_NDX_tickers():
     res=requests.get("https://api.nasdaq.com/api/quote/list-type/nasdaq100",headers=headers)
     main_data=res.json()['data']['data']['rows']
 
-    print([stock['symbol'] for stock in main_data])
     return [stock['symbol'] for stock in main_data]
 
 if __name__ == '__main__':
