@@ -9,23 +9,30 @@ from KSL_system import KumaModel
 import torch
 import joblib
 
-# Define the ticker symbol for Dow Jones Industrial Average
 TEST_MODE = False
+
+
+###################  Hyper-parameters  ##################
 MARKET = "US"
 PERIOD = '1y'
+MODEL = 'LSTM'
+HIDDEN_SIZE = 32
+NUM_LAYER = 2
 EPOCHS = 10000
 feature_length = 14
 label_length = 7
 feature_list = ['High', 'Low', 'Open', 'Close', 'OSS', 'CCG', 'Momentum', 'ILLIQ']
+###################  Hyper-parameters  ##################
+
+
 
 reg_model = KumaModel(
     model_name='drnn', 
-    unit='GRU',
+    unit=MODEL,
     input_size=len(feature_list),
-    hidden_size=32,
-    output_size=7,
-    num_layers=2,
-    dropout_rate=0.3,
+    hidden_size=HIDDEN_SIZE,
+    output_size=label_length,
+    num_layers=NUM_LAYER,
     is_plot=True)
 
 reg_model.set_train_params(loss_type='ic')
@@ -67,7 +74,7 @@ def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, label_s
     # set to train
     reg_model.train_model(sequences, y=labels, seq_length=seq_length, epochs=epochs)
 
-    torch.save(reg_model.model.state_dict(), 'kuma_models/my_model.pth')
+    torch.save(reg_model.model.state_dict(), f'kuma_models/model_{MODEL}_{NUM_LAYER}_{HIDDEN_SIZE}_labelL_{label_length}.pth')
     joblib.dump(scaler, 'kuma_models/scaler.gz')
 
     if TEST_MODE:
@@ -88,8 +95,10 @@ def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, label_s
         plt.legend(loc='upper left')
         plt.show()
 
-code_list = ['^DJI', '^NDX', 'SMCI']
 
+# training datasets
+from get_tickers import get_NDX_tickers
+code_list = ['^DJI', '^NDX'] + get_NDX_tickers()
 
 if __name__ == '__main__':
 
