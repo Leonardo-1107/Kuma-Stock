@@ -18,10 +18,10 @@ PERIOD = '1y'
 MODEL = 'LSTM'
 HIDDEN_SIZE = 32
 NUM_LAYER = 2
-EPOCHS = 10000
+EPOCHS = 20000
 feature_length = 14
 label_length = 7
-feature_list = ['High', 'Low', 'Open', 'Close', 'OSS', 'CCG', 'Momentum', 'ILLIQ']
+feature_list = ['High', 'Low', 'Open', 'Close', 'Volume', 'OSS', 'CCG', 'Momentum', 'ILLIQ']
 ###################  Hyper-parameters  ##################
 
 
@@ -35,7 +35,7 @@ reg_model = KumaModel(
     num_layers=NUM_LAYER,
     is_plot=True)
 
-reg_model.set_train_params(loss_type='ic')
+reg_model.set_train_params(loss_type='mpe')
 
 
 def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, label_sequence_length=7, epochs=15000):
@@ -55,17 +55,18 @@ def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, label_s
     stock_data["ILLIQ"] = ILLIQ_Factor(stock_data, 9)
 
     # the labels should be condsidering future changes
-    saved_label = minmax_scale((stock_data['High'].shift(-1)).fillna(0).copy())
+    saved_label = minmax_scale((stock_data['Close'].shift(-1)).fillna(0).copy())
 
     # load the original scaler for the first candidate
     try:
         scaler = joblib.load('kuma_models/scaler.gz')
+        stock_data[feature_list] = scaler.transform(stock_data[feature_list])
     except:
         scaler = StandardScaler()
         stock_data.fillna(0, inplace=True)
         scaler.fit(stock_data[feature_list])
+        stock_data[feature_list] = scaler.transform(stock_data[feature_list])
 
-    stock_data[feature_list] = scaler.transform(stock_data[feature_list])
     stock_data['Label'] = saved_label
 
     # here to process all the training data and labels
@@ -98,7 +99,7 @@ def train_and_save(code='^DJI', market='US', period='1y', seq_length=14, label_s
 
 # training datasets
 from get_tickers import get_NDX_tickers
-code_list = ['^DJI', '^NDX'] + get_NDX_tickers()
+code_list = ['^DJI', '^NDX']
 
 if __name__ == '__main__':
 
