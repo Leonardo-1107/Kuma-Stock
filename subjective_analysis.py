@@ -91,36 +91,6 @@ saved_price = stock_data['Close'].copy()
 saved_label = minmax_scale(stock_data['Close'].copy())
 
 
-from KSL_system import KumaModel
-reg_model = KumaModel(
-        model_name='drnn',
-        unit=MODEL, 
-        input_size=len(feature_list),
-        hidden_size=32,
-        output_size=7,
-        num_layers=NUM_LAYER,
-        dropout_rate=0.3,
-        is_plot=True)
-reg_model.set_train_params(loss_type='ic')
-
-reg_model.model.load_state_dict(torch.load(f'kuma_models/model_{MODEL}_{NUM_LAYER}_{HIDDEN_SIZE}_labelL_{predict_length}.pth', weights_only=True))
-my_scaler = joblib.load('kuma_models/scaler.gz')
-stock_data.fillna(0, inplace=True)
-my_scaler = StandardScaler()
-stock_data[feature_list] = my_scaler.fit_transform(stock_data[feature_list])
-
-stock_data['Label'] = saved_label
-sequences, labels = create_train_dataset(
-                        stock_data, 
-                        feature_list, 
-                        seq_length=seq_length, 
-                        L=predict_length)
-
-
-
-# reg_model.train_model(sequences, y=labels, seq_length=seq_length, epochs=2000)
-y_scaled, past_prices, future_prices = buying_index(reg_model, sequences[-predict_length:], predict_length)
-
 
 # plot pics
 if MARKET == 'CN':
