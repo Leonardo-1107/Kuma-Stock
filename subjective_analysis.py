@@ -46,7 +46,7 @@ else:
 
     stock = yf.Ticker(CODE)
     stock_data = stock.history(period='1y')
-    start = "2024-01-01"
+    start = "2024-09-01"
     if MARKET=='HK':
         start = "2023-01-01"
     stock_data = yf.download(CODE, start=start, end=datetime.today())
@@ -118,14 +118,14 @@ plt.subplot(4, 1, 3)
 stock_data['CCG_V'] = stock_data['CCG'] * stock_data['Volume']
 plt.scatter(stock_data.index[stock_data["CCG"] > 0.9],
             stock_data["CCG_V"].values[stock_data["CCG"] > 0.9],
-            s=100, alpha=0.8, c='#E06500', edgecolors='#6B4200', label='Over Sell')
+            s=100, alpha=0.8, c='#E06500', edgecolors='#6B4200', label='Over Sold')
 plt.scatter(stock_data.index[stock_data["CCG"] < -0.9],
             stock_data["CCG_V"].values[stock_data["CCG"] < -0.9],
             s=100, alpha=0.8, c='#00E005', marker='^', edgecolors='#003366', label='Over Bought')
 plt.plot(stock_data['CCG_V'], c='#8B582E', ls='--')
 plt.legend(fontsize=14)
 plt.grid()
-plt.title('CCG')
+plt.title('Continous Change (CCG) factor')
 
 
 # OSS Module
@@ -136,7 +136,7 @@ max_position = stock_data["OSS"].idxmax()
 plt.scatter(max_position, max_value, color='grey', s=40, label=f'Highest: {max_value:.2f} on {max_position.date()}')
 plt.legend(fontsize=14)
 plt.grid()
-plt.title('OSS')
+plt.title('Oversold (OSS) factor')
 
 
 plt.tight_layout()
