@@ -41,26 +41,12 @@ if MARKET == "CN":
 else:
     # Create a Ticker object
 
-    stock = yf.Ticker(CODE)
-    stock_data = stock.history(period='1y')
     start = "2024-01-01"
     stock_data = yf.download(CODE, start=start, end=datetime.today())
 
 
 from factors_lib import Momentum, Short_Term_Reversion, FHW_Approaching, Oversold_Reverse_Score, ForceIndex, CCG_Score, ILLIQ_Factor
 
-
-def calculate_vwap(high, low, close, volume):
-    # Step 1: Calculate the typical price for each period
-    typical_price = (high + low + close) / 3
-    
-    # Step 2: Calculate the total price-volume product
-    price_volume_product = typical_price * volume
-    
-    # Step 3: VWAP is the price-volume product divided by the volume
-    vwap = price_volume_product / volume
-    
-    return vwap
 
 target = "Close"
 stock_data["ClosePrice"] = stock_data["Close"]
